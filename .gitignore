@@ -1,0 +1,7 @@
+node_modules
+audit_work/
+outputs/previews/
+outputs/*.inspect.ndjson
+outputs/*_screenshot.png
+outputs/*_mobile.png
+.DS_Store
