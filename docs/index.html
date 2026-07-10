@@ -169,6 +169,14 @@
       color: var(--navy);
     }
 
+    .metric em {
+      display: block;
+      margin-top: 7px;
+      color: var(--muted);
+      font: 700 12px/1 ui-sans-serif, system-ui, sans-serif;
+      font-style: normal;
+    }
+
     .metric.pass strong { color: var(--teal); }
     .metric.drop strong { color: var(--red); }
     .metric.warn strong { color: var(--copper); }
@@ -412,12 +420,7 @@
       <section class="hero">
         <p class="eyebrow">H4A ABM Visit V7 audit</p>
         <h1>Snitcher lead quality report</h1>
-        <p class="subtitle">Compact readout of the V7 routing rules against 441 exported Snitcher accounts. Time on site is intentionally not used as a gate.</p>
-        <div class="hero-meta">
-          <span>Source: snitcher_export_20260710_104110_hWtnzX1GVQ.xlsx</span>
-          <span>Rules: Visit-Parse Domain Info.blueprint.json</span>
-          <span>Generated locally</span>
-        </div>
+        <p class="subtitle">Compact readout of the V7 routing rules against 441 exported Snitcher accounts.</p>
       </section>
       <aside class="verdict">
         <div>
@@ -425,15 +428,14 @@
           <strong>22.7%</strong>
           <p>100 accounts pass the V7 gates. 341 are held back by missing data, URL intent, employee size, or partner-industry exclusion.</p>
         </div>
-        <span class="pill">Time gate: off</span>
       </aside>
     </header>
 
     <section class="metrics">
-      <div class="metric"><span>Audited rows</span><strong>441</strong></div>
-      <div class="metric pass"><span>Pass</span><strong>100</strong></div>
-      <div class="metric drop"><span>Drop</span><strong>341</strong></div>
-      <div class="metric warn"><span>Industry excluded</span><strong>180</strong></div>
+      <div class="metric"><span>Audited rows</span><strong>441</strong><em>100.0% of export</em></div>
+      <div class="metric pass"><span>Pass</span><strong>100</strong><em>22.7% of audited</em></div>
+      <div class="metric drop"><span>Drop</span><strong>341</strong><em>77.3% of audited</em></div>
+      <div class="metric warn"><span>Industry excluded</span><strong>180</strong><em>40.8% of audited</em></div>
     </section>
 
     <main>
@@ -874,7 +876,7 @@
           <div class="insights">
             <div class="insight">
               <strong>The flow is selective.</strong>
-              Only 100 of 441 accounts pass after removing the time-on-site gate.
+              Only 100 of 441 accounts pass the current V7 routing rules.
             </div>
             <div class="insight warn">
               <strong>Industry keywords are the main lever.</strong>
@@ -896,7 +898,6 @@
             <h2>Rule notes</h2>
           </div>
           <div class="legend">
-            <span><strong>Time on site:</strong> not applied.</span>
             <span><strong>URL matching:</strong> path/query only, not full URL, so <code>lp</code> does not accidentally match <code>help4access.com</code>.</span>
             <span><strong>Keyword matching:</strong> case-insensitive substring behavior to mirror Make.</span>
             <span><strong>Excel source:</strong> full row-level detail remains in <code>h4a_v7_snitcher_audit.xlsx</code>.</span>

@@ -9,6 +9,9 @@ const data = JSON.parse(await fs.readFile(dataPath, "utf8"));
 const { summary } = data;
 const pct = (value, digits = 1) => `${(value * 100).toFixed(digits)}%`;
 const fmt = new Intl.NumberFormat("en-US");
+const auditedRate = 1;
+const dropRate = summary.drop_count / summary.row_count;
+const industryExcludedRate = summary.industry_excluded_rows / summary.row_count;
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -238,6 +241,14 @@ const html = `<!doctype html>
       margin-top: 8px;
       font: 700 34px/1 ui-sans-serif, system-ui, sans-serif;
       color: var(--navy);
+    }
+
+    .metric em {
+      display: block;
+      margin-top: 7px;
+      color: var(--muted);
+      font: 700 12px/1 ui-sans-serif, system-ui, sans-serif;
+      font-style: normal;
     }
 
     .metric.pass strong { color: var(--teal); }
@@ -483,12 +494,7 @@ const html = `<!doctype html>
       <section class="hero">
         <p class="eyebrow">H4A ABM Visit V7 audit</p>
         <h1>Snitcher lead quality report</h1>
-        <p class="subtitle">Compact readout of the V7 routing rules against ${fmt.format(summary.row_count)} exported Snitcher accounts. Time on site is intentionally not used as a gate.</p>
-        <div class="hero-meta">
-          <span>Source: ${escapeHtml(summary.source_file)}</span>
-          <span>Rules: ${escapeHtml(summary.blueprint_file)}</span>
-          <span>Generated locally</span>
-        </div>
+        <p class="subtitle">Compact readout of the V7 routing rules against ${fmt.format(summary.row_count)} exported Snitcher accounts.</p>
       </section>
       <aside class="verdict">
         <div>
@@ -496,15 +502,14 @@ const html = `<!doctype html>
           <strong>${pct(summary.pass_rate)}</strong>
           <p>${fmt.format(summary.pass_count)} accounts pass the V7 gates. ${fmt.format(summary.drop_count)} are held back by missing data, URL intent, employee size, or partner-industry exclusion.</p>
         </div>
-        <span class="pill">Time gate: off</span>
       </aside>
     </header>
 
     <section class="metrics">
-      <div class="metric"><span>Audited rows</span><strong>${fmt.format(summary.row_count)}</strong></div>
-      <div class="metric pass"><span>Pass</span><strong>${fmt.format(summary.pass_count)}</strong></div>
-      <div class="metric drop"><span>Drop</span><strong>${fmt.format(summary.drop_count)}</strong></div>
-      <div class="metric warn"><span>Industry excluded</span><strong>${fmt.format(summary.industry_excluded_rows)}</strong></div>
+      <div class="metric"><span>Audited rows</span><strong>${fmt.format(summary.row_count)}</strong><em>${pct(auditedRate)} of export</em></div>
+      <div class="metric pass"><span>Pass</span><strong>${fmt.format(summary.pass_count)}</strong><em>${pct(summary.pass_rate)} of audited</em></div>
+      <div class="metric drop"><span>Drop</span><strong>${fmt.format(summary.drop_count)}</strong><em>${pct(dropRate)} of audited</em></div>
+      <div class="metric warn"><span>Industry excluded</span><strong>${fmt.format(summary.industry_excluded_rows)}</strong><em>${pct(industryExcludedRate)} of audited</em></div>
     </section>
 
     <main>
@@ -604,7 +609,7 @@ const html = `<!doctype html>
           <div class="insights">
             <div class="insight">
               <strong>The flow is selective.</strong>
-              Only ${fmt.format(summary.pass_count)} of ${fmt.format(summary.row_count)} accounts pass after removing the time-on-site gate.
+              Only ${fmt.format(summary.pass_count)} of ${fmt.format(summary.row_count)} accounts pass the current V7 routing rules.
             </div>
             <div class="insight warn">
               <strong>Industry keywords are the main lever.</strong>
@@ -626,7 +631,6 @@ const html = `<!doctype html>
             <h2>Rule notes</h2>
           </div>
           <div class="legend">
-            <span><strong>Time on site:</strong> not applied.</span>
             <span><strong>URL matching:</strong> path/query only, not full URL, so <code>lp</code> does not accidentally match <code>help4access.com</code>.</span>
             <span><strong>Keyword matching:</strong> case-insensitive substring behavior to mirror Make.</span>
             <span><strong>Excel source:</strong> full row-level detail remains in <code>h4a_v7_snitcher_audit.xlsx</code>.</span>
