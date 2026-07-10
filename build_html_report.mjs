@@ -619,10 +619,6 @@ const html = `<!doctype html>
             <h2>Read this first</h2>
           </div>
           <div class="insights">
-            <div class="insight">
-              <strong>The flow is selective.</strong>
-              Only ${fmt.format(summary.pass_count)} of ${fmt.format(summary.row_count)} accounts pass the current V7 routing rules.
-            </div>
             <div class="insight warn">
               <strong>Industry keywords are the main lever.</strong>
               ${fmt.format(summary.industry_excluded_rows)} rows match at least one partner keyword. The top keyword is "${escapeHtml(topKeyword.industry_keyword)}" at ${fmt.format(topKeyword.excluded_row_count)} rows.
