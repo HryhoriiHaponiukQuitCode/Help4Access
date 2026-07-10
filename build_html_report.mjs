@@ -12,6 +12,18 @@ const fmt = new Intl.NumberFormat("en-US");
 const auditedRate = 1;
 const dropRate = summary.drop_count / summary.row_count;
 const industryExcludedRate = summary.industry_excluded_rows / summary.row_count;
+const dropReasonLabels = {
+  partner_industry_exclusion: "partner-industry exclusion",
+  no_high_intent_url: "no high-intent URL",
+  missing_industry: "missing industry",
+  employee_range_excluded: "employee range excluded",
+  missing_employee_range: "missing employee range",
+  missing_domain: "missing domain",
+};
+const verdictDropSummary = Object.entries(summary.drop_reason_counts)
+  .sort(([, a], [, b]) => b - a)
+  .map(([reason, count]) => `${dropReasonLabels[reason] || reason.replaceAll("_", " ")} (${fmt.format(count)})`)
+  .join(", ");
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -500,7 +512,7 @@ const html = `<!doctype html>
         <div>
           <small>Current pass rate</small>
           <strong>${pct(summary.pass_rate)}</strong>
-          <p>${fmt.format(summary.pass_count)} accounts pass the V7 gates. ${fmt.format(summary.drop_count)} are held back by missing data, URL intent, employee size, or partner-industry exclusion.</p>
+          <p>${fmt.format(summary.pass_count)} accounts pass the V7 gates. Drop filters by volume: ${verdictDropSummary}.</p>
         </div>
       </aside>
     </header>
