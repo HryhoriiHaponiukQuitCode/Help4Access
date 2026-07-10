@@ -924,7 +924,7 @@ function buildHtml(payload) {
         <div class="stage-head">
           <div>
             <h2>Routing Sankey</h2>
-            <p class="hint">Flow width is fixed for readability. Counts and percentages are shown in the labels. Hover for details, click any node or flow to inspect it.</p>
+            <p class="hint">Flow width is proportional to the number of companies. Hover for details, click any node or flow to inspect it.</p>
           </div>
           <div class="legend">
             <span class="key"><i style="background: var(--green)"></i>Advances / customer</span>
@@ -1253,11 +1253,10 @@ function buildHtml(payload) {
       }
 
       const nodeById = new Map(nodes.map((node) => [node.id, node]));
-      const linkWidth = 22;
       for (const link of links) {
         link.s = nodeById.get(link.source);
         link.t = nodeById.get(link.target);
-        link.w = linkWidth;
+        link.w = Math.max(1.4, link.value * scale);
       }
 
       const stack = (node, list, prop) => {
