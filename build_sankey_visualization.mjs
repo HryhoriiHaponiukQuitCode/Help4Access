@@ -3,6 +3,7 @@ import path from "node:path";
 
 const root = process.cwd();
 const sourceCsv = "snitcher_export_20260710_142327_0ZrlFmrqaM.csv";
+const snitcherSegmentIdsJson = "snitcher_lead_parsing_segment_ids_20260710_104110.json";
 const blueprintJson = "Visit-Parse Domain Info.blueprint.json";
 const outputDir = path.join(root, "outputs");
 const docsDir = path.join(root, "docs", "2026-07-10-h4a-v7-sankey-filter-visualizer");
@@ -56,7 +57,8 @@ function parseCsv(text) {
     rows.push(row);
   }
 
-  const [headers, ...records] = rows;
+  const [rawHeaders, ...records] = rows;
+  const headers = rawHeaders.map((header) => header.replace(/^\ufeff/, ""));
   return records.map((record) =>
     Object.fromEntries(headers.map((header, index) => [header, record[index] ?? ""])),
   );
@@ -868,7 +870,13 @@ function buildHtml(payload) {
       <div class="rules-grid">
         <div class="panel">
           <div class="panel-head"><h3>Time on site</h3></div>
-          <p class="panel-hint">Stage 1 — companies below the threshold drop out.</p>
+          <p class="panel-hint">Stage 1 — default matches the saved Snitcher segment. Switch to CSV mode to test other thresholds.</p>
+          <label class="field">Time source
+            <select id="timeSource">
+              <option value="snitcher_segment">Snitcher segment, fixed >30s</option>
+              <option value="csv_total_time">CSV Total time on Site</option>
+            </select>
+          </label>
           <label class="field">Threshold, seconds
             <input id="timeThreshold" type="number" min="0" step="1" value="30" />
           </label>
@@ -916,7 +924,7 @@ function buildHtml(payload) {
         <div class="stage-head">
           <div>
             <h2>Routing Sankey</h2>
-            <p class="hint">Flow width is proportional to the number of companies. Hover for details, click any node or flow to inspect it.</p>
+            <p class="hint">Flow width is fixed for readability. Counts and percentages are shown in the labels. Hover for details, click any node or flow to inspect it.</p>
           </div>
           <div class="legend">
             <span class="key"><i style="background: var(--green)"></i>Advances / customer</span>
@@ -969,7 +977,7 @@ function buildHtml(payload) {
     const DEFAULTS = payload.defaults;
 
     const els = {};
-    for (const id of ["timeThreshold", "timeMode", "sankey", "tooltip", "selectedBadge", "drawerTitle",
+    for (const id of ["timeSource", "timeThreshold", "timeMode", "sankey", "tooltip", "selectedBadge", "drawerTitle",
       "drawerSubtitle", "drawerCount", "companyRows", "companySearch", "downloadCsv", "truncNote",
       "totalCompanies", "timeQualified", "timeQualifiedPct", "intentQualified", "intentQualifiedPct",
       "customerMetric", "customerPct", "customerCount", "partnerMetric", "partnerPct", "summaryText",
@@ -1019,8 +1027,10 @@ function buildHtml(payload) {
       state.url = new Map(DEFAULTS.urlKeywords.map((k) => [k, true]));
       state.partner = new Map(DEFAULTS.partnerKeywords.map((k) => [k, true]));
       state.sizes = new Map(payload.employeeRanges.map((item) => [item.label, DEFAULTS.excludedRanges.includes(item.label)]));
+      els.timeSource.value = DEFAULTS.timeSource;
       els.timeThreshold.value = DEFAULTS.timeThreshold;
       els.timeMode.value = DEFAULTS.timeMode;
+      syncTimeControls();
     }
 
     function checkedKeys(map) {
@@ -1118,9 +1128,11 @@ function buildHtml(payload) {
 
     function routeRow(row, settings) {
       const route = ["all"];
-      const timePass = settings.timeMode === "gte"
-        ? row.timeSeconds >= settings.timeThreshold
-        : row.timeSeconds > settings.timeThreshold;
+      const timePass = settings.timeSource === "snitcher_segment"
+        ? row.inLeadParsingSegment
+        : settings.timeMode === "gte"
+          ? row.timeSeconds >= settings.timeThreshold
+          : row.timeSeconds > settings.timeThreshold;
 
       if (!timePass) {
         route.push("time_drop");
@@ -1170,6 +1182,7 @@ function buildHtml(payload) {
 
     function buildFlow() {
       const settings = {
+        timeSource: els.timeSource.value,
         timeThreshold: Number(els.timeThreshold.value || 0),
         timeMode: els.timeMode.value,
         urlKeywords: checkedKeys(state.url),
@@ -1240,10 +1253,11 @@ function buildHtml(payload) {
       }
 
       const nodeById = new Map(nodes.map((node) => [node.id, node]));
+      const linkWidth = 22;
       for (const link of links) {
         link.s = nodeById.get(link.source);
         link.t = nodeById.get(link.target);
-        link.w = Math.max(1.4, link.value * scale);
+        link.w = linkWidth;
       }
 
       const stack = (node, list, prop) => {
@@ -1537,9 +1551,16 @@ function buildHtml(payload) {
     setupGroup("partner", { addable: true });
     setupGroup("sizes", { showCounts: true, exclude: true });
 
-    for (const element of [els.timeThreshold, els.timeMode]) {
+    function syncTimeControls() {
+      const fixed = els.timeSource.value === "snitcher_segment";
+      els.timeThreshold.disabled = fixed;
+      els.timeMode.disabled = fixed;
+    }
+
+    for (const element of [els.timeSource, els.timeThreshold, els.timeMode]) {
       element.addEventListener("input", onRulesChange);
     }
+    els.timeSource.addEventListener("input", syncTimeControls);
     els.companySearch.addEventListener("input", renderDrawer);
     els.downloadCsv.addEventListener("click", downloadCsv);
     els.resetBtn.addEventListener("click", () => {
@@ -1561,6 +1582,8 @@ function buildHtml(payload) {
 }
 
 const csvText = await fs.readFile(path.join(root, sourceCsv), "utf8");
+const snitcherSegment = JSON.parse(await fs.readFile(path.join(root, snitcherSegmentIdsJson), "utf8"));
+const snitcherSegmentIds = new Set(snitcherSegment.ids.map((id) => String(id)));
 const blueprint = JSON.parse(await fs.readFile(path.join(root, blueprintJson), "utf8"));
 const rules = loadRules(blueprint);
 const rows = parseCsv(csvText).map((row, index) => ({
@@ -1580,6 +1603,7 @@ const rows = parseCsv(csvText).map((row, index) => ({
   uniquePagesVisited: clean(row["Unique pages Visited"]),
   pagePaths: extractPagePaths(row["Unique pages Visited"]),
   linkedin: clean(row.linkedin_handle),
+  inLeadParsingSegment: snitcherSegmentIds.has(clean(row.ID) || String(index + 1)),
 }));
 
 const sizeCounts = new Map();
@@ -1598,10 +1622,12 @@ const employeeRanges = Array.from(sizeCounts.entries())
 const html = buildHtml({
   generatedAt: new Date().toISOString(),
   sourceFile: sourceCsv,
+  snitcherSegment,
   rows,
   rules,
   employeeRanges,
   defaults: {
+    timeSource: "snitcher_segment",
     timeThreshold: 30,
     timeMode: "gt",
     urlKeywords: rules.urlKeywords,

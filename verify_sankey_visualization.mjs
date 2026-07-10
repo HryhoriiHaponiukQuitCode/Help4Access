@@ -32,27 +32,33 @@ const result = await page.evaluate(() => {
     nodes: document.querySelectorAll(".node").length,
     links: document.querySelectorAll(".link").length,
     rows: document.querySelectorAll("#companyRows tr").length,
+    timeSource: document.querySelector("#timeSource")?.value,
+    timeQualified: document.querySelector("#timeQualified")?.textContent,
     customerCount: document.querySelector("#customerCount")?.textContent,
     overflowCount: overflowNodes.length,
     overflowNodes,
   };
 });
 
-await page.click(".link");
+await page.locator(".node").nth(1).evaluate((el) => {
+  el.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+});
 const afterClick = await page.evaluate(() => ({
   drawerTitle: document.querySelector("#drawerTitle")?.textContent,
   drawerCount: document.querySelector("#drawerCount")?.textContent,
 }));
 
+await page.screenshot({ path: path.join(root, "outputs", "h4a_v7_sankey_filter_visualizer_screenshot.png"), fullPage: true });
+await page.selectOption("#timeSource", "csv_total_time");
 await page.fill("#timeThreshold", "60");
 await page.waitForTimeout(100);
 const afterChange = await page.evaluate(() => ({
+  timeSource: document.querySelector("#timeSource")?.value,
   timeQualified: document.querySelector("#timeQualified")?.textContent,
   nodes: document.querySelectorAll(".node").length,
   links: document.querySelectorAll(".link").length,
 }));
 
-await page.screenshot({ path: path.join(root, "outputs", "h4a_v7_sankey_filter_visualizer_screenshot.png"), fullPage: true });
 await browser.close();
 
 console.log(JSON.stringify({ initial: result, afterClick, afterChange }, null, 2));
