@@ -871,15 +871,23 @@ Unknown</textarea>
         byLayer.get(node.layer).push(node);
       }
 
-      for (const [layer, layerNodes] of byLayer.entries()) {
-        const total = layerNodes.reduce((sum, node) => sum + node.value, 0) || 1;
+      const layerSpecs = Array.from(byLayer.entries()).map(([layer, layerNodes]) => {
         const gap = 14;
+        const total = layerNodes.reduce((sum, node) => sum + node.value, 0) || 1;
         const available = height - margin.top - margin.bottom - gap * (layerNodes.length - 1);
+        return { layer, layerNodes, gap, total, available };
+      });
+      const valueScale = Math.min(...layerSpecs.map((spec) => spec.available / spec.total));
+
+      for (const { layer, layerNodes, gap, available } of layerSpecs) {
+        const layerHeight = layerNodes.reduce((sum, node) => sum + Math.max(4, node.value * valueScale), 0) + gap * (layerNodes.length - 1);
+        const topOffset = Math.max(0, (available - layerHeight) / 2);
         let y = margin.top;
+        y += topOffset;
         for (const node of layerNodes) {
           node.x = margin.left + layer * layerGap;
           node.w = nodeW;
-          node.h = Math.max(16, available * node.value / total);
+          node.h = Math.max(4, node.value * valueScale);
           node.y = y;
           node.inOffset = 0;
           node.outOffset = 0;
@@ -888,21 +896,32 @@ Unknown</textarea>
       }
 
       const nodeById = new Map(nodes.map((node) => [node.id, node]));
-      const maxTotal = rows.length || 1;
+      const linkWidth = 22;
+      const linkGap = 6;
+      const outgoingCounts = new Map();
+      const incomingCounts = new Map();
+      for (const link of links) {
+        outgoingCounts.set(link.source, (outgoingCounts.get(link.source) || 0) + 1);
+        incomingCounts.set(link.target, (incomingCounts.get(link.target) || 0) + 1);
+      }
+      for (const node of nodes) {
+        const outgoingWidth = (outgoingCounts.get(node.id) || 0) * linkWidth + Math.max(0, (outgoingCounts.get(node.id) || 0) - 1) * linkGap;
+        const incomingWidth = (incomingCounts.get(node.id) || 0) * linkWidth + Math.max(0, (incomingCounts.get(node.id) || 0) - 1) * linkGap;
+        node.outOffset = Math.max(0, (node.h - outgoingWidth) / 2);
+        node.inOffset = Math.max(0, (node.h - incomingWidth) / 2);
+      }
       for (const link of links) {
         const source = nodeById.get(link.source);
         const target = nodeById.get(link.target);
-        const sourceScale = source.h / Math.max(source.value, 1);
-        const targetScale = target.h / Math.max(target.value, 1);
-        link.width = Math.max(2, Math.min(38, link.value / maxTotal * 190));
+        link.width = linkWidth;
         link.source = source;
         link.target = target;
-        source.outOffset += link.value * sourceScale / 2;
-        target.inOffset += link.value * targetScale / 2;
+        source.outOffset += link.width / 2;
+        target.inOffset += link.width / 2;
         source.outY = source.y + source.outOffset;
         target.inY = target.y + target.inOffset;
-        source.outOffset += link.value * sourceScale / 2;
-        target.inOffset += link.value * targetScale / 2;
+        source.outOffset += link.width / 2 + linkGap;
+        target.inOffset += link.width / 2 + linkGap;
       }
 
       return { nodes, links };
